@@ -2,7 +2,13 @@
 cd /opt/koboldai
 
 if [[ -n update ]];then
-        git pull --recurse-submodules && ./install_requirements.sh cuda
+    git remote set-url origin $githubaddress
+	git pull --ff
+	git reset --hard origin/$githubbranch
+	git checkout $githubbranch
+	if [ $install_packages != false ];then
+		./install_requirements.sh cuda
+	fi
 	git submodule update --init --recursive
 fi
 
@@ -33,7 +39,7 @@ if [[ -v KOBOLDAI_MODELDIR ]];then
 	ln -s $KOBOLDAI_MODELDIR/functional_models/ functional_models
 fi
 
-for FILE in $KOBOLDAI_DATADIR*
+for FILE in $KOBOLDAI_DATADIR/*
 do
     FILENAME="$(basename $FILE)"
 	rm /opt/koboldai/$FILENAME

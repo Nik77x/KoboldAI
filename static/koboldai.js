@@ -1622,6 +1622,7 @@ function show_model_menu(data) {
 }
 
 function selected_model_info(data) {
+	console.log(data);
 	var accept = document.getElementById("btn_loadmodelaccept");
 	//hide or unhide key
 	if (data.key) {
@@ -1815,6 +1816,7 @@ function selected_model_info(data) {
 	}
 	accept.disabled = false;
 	
+	set_8_bit_mode(invert=false);
 	
 }
 
@@ -1877,6 +1879,7 @@ function load_model() {
 			   'disk_layers': disk_layers, 'url': document.getElementById("modelurl").value, 
 			   'online_model': selected_models,
 			   'use_8_bit': document.getElementById('use_8_bit').checked};
+	console.log(message);
 	socket.emit("load_model", message);
 	closePopups();
 }
@@ -3161,6 +3164,18 @@ function save_preset() {
 }
 
 //--------------------------------------------General UI Functions------------------------------------
+function set_8_bit_mode(invert=true) { //we flip this because the event is fired before the div actually changes the input box (if we change from bootstrap-toggles this might need adjustment)
+	bit_8_status = document.getElementById("use_8_bit").checked; 
+	if (invert) {
+		bit_8_status = !bit_8_status;
+	}
+	if (bit_8_status) {
+		document.getElementById("modellayers").classList.add("hidden");
+	} else {
+		document.getElementById("modellayers").classList.remove("hidden");
+	}
+}
+
 function set_ui_level(level) {
 	for (classname of ['setting_container', 'setting_container_single', 'setting_container_single_wide', 'biasing', 'palette_area', 'advanced_theme']) {
 		for (element of document.getElementsByClassName(classname)) {
