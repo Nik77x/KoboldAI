@@ -1615,6 +1615,7 @@ def general_startup(override_args=None):
 
     if args.host:
         koboldai_vars.host = True;
+        args.unblock = True;
 
     if args.cpu:
         koboldai_vars.use_colab_tpu = False
@@ -2469,6 +2470,29 @@ def patch_transformers():
                 return True
             return False
             
+    class SinglelineStopper(StoppingCriteria):
+        # If singleline mode is enabled, it's pointless to generate output beyond the first newline.
+        def __init__(self, tokenizer):
+            self.tokenizer = tokenizer
+
+        def __call__(
+                self,
+                input_ids: torch.LongTensor,
+                scores: torch.FloatTensor,
+                **kwargs,
+        ) -> bool:
+            if not koboldai_vars.singleline:
+                return False
+
+            data = [tokenizer.decode(x) for x in input_ids]
+            if 'completed' not in self.__dict__:
+                self.completed = [False]*len(input_ids)
+
+            for i in range(len(input_ids)):
+                if data[i][-1] == "\n":
+                    self.completed[i] = True
+
+            return self.completed[i]
 
     class CoreStopper(StoppingCriteria):
         # Controls core generation stuff; aborting, counting generated tokens, etc
@@ -2577,6 +2601,7 @@ def patch_transformers():
         token_streamer = TokenStreamer(tokenizer=tokenizer)
 
         stopping_criteria.insert(0, ChatModeStopper(tokenizer=tokenizer))
+        stopping_criteria.insert(0, SinglelineStopper(tokenizer=tokenizer))
         stopping_criteria.insert(0, self.kai_scanner)
         token_streamer = TokenStreamer(tokenizer=tokenizer)
         stopping_criteria.insert(0, token_streamer)
@@ -13303,7 +13328,10 @@ def run():
             logger.init_ok("Webserver", status="OK")
             logger.message(f"Webserver has started, you can now connect to this machine at port: {port}")
         koboldai_vars.serverstarted = True
-        socketio.run(app, host='0.0.0.0', port=port)
+        if args.unblock:
+            socketio.run(app, port=port, host='0.0.0.0')
+        else:
+            socketio.run(app, port=port)
     else:
         startup()
         if args.unblock:
